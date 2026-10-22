@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% block title %}预测结果 · 乳愈智能{% endblock %}
+
+{% block content %}
+{% set p = prediction %}
+<section class="result-hero">
+  <div class="verdict-card verdict-{{ 'bad' if p.output == 'Malignant' else 'good' }}">
+    <div class="verdict-head">
+      <span class="pill pill-light">{{ p.algorithm_label }} 模型</span>
+      <span class="risk-badge" style="--risk-color: {{ p.risk_color }}">{{ p.risk_level }}</span>
+    </div>
+    <h1 class="verdict-title">{{ p.output_cn }}肿瘤</h1>
+    <p class="verdict-sub">
+      模型判定结果：<strong>{{ p.output }}</strong>（{{ p.output_cn }}）
+      &nbsp;·&nbsp; 置信度 {{ '%.2f'|format(p.confidence * 100) }}%
+    </p>
+    <p class="verdict-note">
+      该判定基于 30 项细胞核形态学特征，属于统计预测结果，需经病理学检查确认。
+    </p>
+  </div>
+
+  <div class="gauge-card">
+    <div class="gauge-wrap">
+      <svg class="gauge" viewBox="0 0 200 200" role="img"
+           aria-label="恶性概率 {{ '%.1f'|format(p.probability * 100) }}%">
+        <circle class="gauge-track" cx="100" cy="100" r="78"></circle>
+        <circle class="gauge-progress" cx="100" cy="100" r="78"
+                style="stroke-dasharray: 490; stroke-dashoffset: 490;"
+                data-progress="{{ p.probability }}"></circle>
+      </svg>
+      <div class="gauge-center">
+        <strong data-count="{{ p.probability * 100 }}">0</strong>
+        <span>恶性概率 %</span>
+      </div>
+    </div>
+    <div class="gauge-legend">
+      <div>
+        <span class="dot"></span>恶性概率
+        <strong>{{ '%.2f'|format(p.probability * 100) }}%</strong>
+      </div>
+      <div>
+        <span class="dot dot-benign"></span>良性概率
+        <strong>{{ '%.2f'|format(p.benign_probability * 100) }}%</strong>
+      </div>
+      <div>
+        <span class="dot dot-time"></span>预测耗时
+        <strong>{{ p.elapsed_ms }} ms</strong>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="panel rag-panel" id="ragPanel" data-features="{{ p.features|tojson }}">
+  <div class="panel-head">
+    <div>
+      <h2>RAG 智能解读</h2>
+      <p class="muted">预测结果 → 知识库检索 → 大模型生成，答案附知识来源，可追溯。</p>
+    </div>
+    <span class="mode-chip" id="ragMode">正在检索知识库…</span>
+  </div>
+  <div id="ragAnswer" class="answer">
+    <div class="skeleton"></div>
+    <div class="skeleton short"></div>
+  </div>
+  <div id="ragSources" class="sources"></div>
+</section>
+
+<div class="result-grid">
+  <section class="panel">
+    <h2>关键影响因素</h2>
+    <p class="muted">对本次判定贡献最大的特征（贡献 = 标准化特征值 × 模型权重）。</p>
+    <ul class="contribution-list">
+      {% for c in p.contributions %}
+      <li class="contribution {{ 'is-risk' if c.direction == 'malignant' else 'is-safe' }}">
+        <div class="contribution-head">
+          <span class="contribution-name">{{ c.label }}</span>
+          <span class="contribution-value">{{ c.value }}</span>
+        </div>
+        <div class="contribution-bar">
+          <span style="width: {{ c.bar_pct }}%"></span>
+        </div>
+        <span class="contribution-tag">
+          {{ '倾向恶性' if c.direction == 'malignant' else '倾向良性' }}
+          （z={{ c.z_score }}）
+        </span>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  <section class="panel">
+    <h2>输入特征明细</h2>
+    <div class="detail-table">
+      <table>
+        <thead>
+          <tr><th>序号</th><th>特征</th><th>中文名称</th><th>取值</th></tr>
+        </thead>
+        <tbody>
+          {% for name in feature_list %}
+          <tr>
+            <td>{{ loop.index }}</td>
+            <td><code>{{ name }}</code></td>
+            <td>{{ labels[name] }}</td>
+            <td>{{ p.features[loop.index0] }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<section class="panel">
+  <h2>风险分层建议</h2>
+  <div class="risk-ladder">
+    <div class="ladder-item {{ 'is-active' if p.risk_level == '低风险' }}">
+      <strong>低风险</strong><span>概率 &lt; 35%</span>
+      <p>形态接近良性，按常规筛查间隔随访即可，无需额外干预。</p>
+    </div>
+    <div class="ladder-item {{ 'is-active' if p.risk_level == '中风险' }}">
+      <strong>中风险</strong><span>35% ～ 70%</span>
+      <p>不确定性较大，建议 3～6 个月复查，必要时加做超声/钼靶或穿刺活检。</p>
+    </div>
+    <div class="ladder-item {{ 'is-active' if p.risk_level == '高风险' }}">
+      <strong>高风险</strong><span>≥ 70%</span>
+      <p>建议尽快至乳腺专科就诊，安排 BI-RADS 评估与病理活检明确诊断。</p>
+    </div>
+  </div>
+</section>
+
+<div class="result-actions">
+  <a class="btn btn-primary" href="/">再测一次</a>
+  <a class="btn btn-ghost" href="/assistant">向知识助手提问</a>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/result.js') }}"></script>
+{% endblock %}

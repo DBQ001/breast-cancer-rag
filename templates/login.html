@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>登录 · 乳愈智能</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="login-body">
+  <div class="bg-decor" aria-hidden="true">
+    <span class="blob blob-a"></span>
+    <span class="blob blob-b"></span>
+  </div>
+
+  <div class="login-wrap">
+    <form class="login-card" method="post" action="{{ url_for('login') }}">
+      <div class="login-brand">
+        <span class="brand-mark">乳</span>
+        <span class="brand-text">
+          <strong>乳愈智能</strong>
+          <small>Breast Cancer AI · RAG</small>
+        </span>
+      </div>
+
+      <h1 class="login-title">登录系统</h1>
+      <p class="muted login-sub">乳腺癌 AI 预测系统 · 专业实习 2 期末大作业</p>
+
+      {% if error %}
+      <p class="login-error">{{ error }}</p>
+      {% endif %}
+
+      <input type="hidden" name="next" value="{{ next }}">
+
+      <label class="field">
+        <span class="field-label">账号</span>
+        <input type="text" name="username" value="{{ username }}" placeholder="请输入账号"
+               autocomplete="username" autofocus required>
+      </label>
+
+      <label class="field">
+        <span class="field-label">口令</span>
+        <input type="password" name="password" placeholder="请输入口令"
+               autocomplete="current-password" required>
+      </label>
+
+      <button type="submit" class="btn btn-primary btn-lg login-submit">登 录</button>
+
+      <p class="login-hint">
+        演示账号：<code>admin</code> / <code>admin123</code><br>
+        登录后可在网页右下角「设置」中修改账号与口令。
+      </p>
+    </form>
+  </div>
+</body>
+</html>

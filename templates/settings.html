@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %}系统设置 · 乳愈智能{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="crumb"><a href="/">首页</a> / 系统设置</p>
+    <h1>系统设置</h1>
+    <p class="muted">大模型接入、RAG 检索参数与账号口令；保存后立即生效，无需重启服务。</p>
+  </div>
+</div>
+
+<div class="settings-grid">
+  <section class="panel">
+    <div class="panel-head">
+      <div>
+        <h2>大模型接入</h2>
+        <p class="muted">默认 local 为离线检索式；接入 OpenAI 兼容接口（如 DeepSeek）请选择 openai。</p>
+      </div>
+      <span class="pill" id="providerBadge">{{ settings.llm_provider }}</span>
+    </div>
+
+    <div class="form-row">
+      <label class="field">
+        <span class="field-label">接入方式</span>
+        <select id="llmProvider">
+          <option value="local">local（本地检索式，离线可用）</option>
+          <option value="openai">openai（OpenAI 兼容接口）</option>
+          <option value="dify">dify（Dify 平台智能体）</option>
+          <option value="coze">coze（扣子智能体）</option>
+        </select>
+      </label>
+      <label class="field">
+        <span class="field-label">模型名称</span>
+        <input type="text" id="llmModel" placeholder="例如 deepseek-flash">
+      </label>
+    </div>
+
+    <label class="field">
+      <span class="field-label">接口地址（Base URL）</span>
+      <input type="text" id="llmBaseUrl" placeholder="例如 https://api.deepseek.com/v1">
+      <span class="field-hint">填到 /v1 为止，系统会自动拼接 /chat/completions</span>
+    </label>
+
+    <div class="form-row">
+      <label class="field">
+        <span class="field-label">API Key</span>
+        <input type="password" id="llmApiKey" autocomplete="off"
+               placeholder="{{ '已配置，留空则不修改' if settings.llm_api_key_set else '请输入 API Key' }}">
+      </label>
+      <label class="field field-narrow">
+        <span class="field-label">请求超时（秒）</span>
+        <input type="number" id="llmTimeout" min="1" step="1">
+      </label>
+    </div>
+
+    <div class="settings-actions">
+      <button type="button" class="btn btn-ghost" id="testBtn">测试连接</button>
+      <span class="test-result" id="testResult"></span>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <div>
+        <h2>RAG 检索参数</h2>
+        <p class="muted">融合得分 = 向量权重 × 向量分 + 关键词权重 × BM25 分</p>
+      </div>
+    </div>
+    <div class="form-row">
+      <label class="field">
+        <span class="field-label">召回片段数 Top-K</span>
+        <input type="number" id="ragTopK" min="1" max="20" step="1">
+      </label>
+      <label class="field">
+        <span class="field-label">向量权重</span>
+        <input type="number" id="ragVectorWeight" min="0" max="1" step="0.05">
+      </label>
+      <label class="field">
+        <span class="field-label">关键词权重</span>
+        <input type="number" id="ragKeywordWeight" min="0" max="1" step="0.05">
+      </label>
+    </div>
+    <p class="muted">
+      当前知识库：{{ rag.document_count }} 篇文档 / {{ rag.chunk_count }} 个检索片段，修改后立即用于下一次检索。
+    </p>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <div>
+        <h2>账号与安全</h2>
+        <p class="muted">用于登录本系统的账号；口令至少 6 位，保存后立即生效。</p>
+      </div>
+    </div>
+    <div class="form-row">
+      <label class="field">
+        <span class="field-label">登录账号</span>
+        <input type="text" id="authUsername" autocomplete="username">
+      </label>
+      <label class="field">
+        <span class="field-label">新口令（留空则不修改）</span>
+        <input type="password" id="newPassword" placeholder="至少 6 位" autocomplete="new-password">
+      </label>
+    </div>
+  </section>
+</div>
+
+<div class="settings-bar">
+  <span class="muted">修改后点击保存，配置会写入 instance/settings.json 并立即生效。</span>
+  <button type="button" class="btn btn-primary btn-lg" id="saveBtn">保存设置</button>
+</div>
+
+<script type="application/json" id="settingsData">{{ settings|tojson }}</script>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/settings.js') }}"></script>
+{% endblock %}

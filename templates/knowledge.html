@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}医学知识库 · 乳愈智能{% endblock %}
+
+{% block content %}
+<section class="page-head">
+  <div>
+    <h1>医学知识库</h1>
+    <p class="muted">
+      RAG 的知识来源。共 {{ documents|length }} 篇文档，重新整理索引后即可被问答与解读功能检索。
+    </p>
+  </div>
+  <button type="button" class="btn btn-ghost" id="rebuildBtn">重建索引</button>
+</section>
+
+<div class="doc-grid">
+  {% for doc in documents %}
+  <a class="doc-card" href="/knowledge/{{ doc.filename }}">
+    <span class="doc-index">{{ '%02d'|format(loop.index) }}</span>
+    <h3>{{ doc.title }}</h3>
+    <p class="muted">{{ doc.filename }}</p>
+    <span class="doc-meta">{{ doc.chars }} 字符</span>
+  </a>
+  {% endfor %}
+</div>
+
+<section class="panel">
+  <h2>检索效果自测</h2>
+  <p class="muted">输入问题，直接查看 RAG 召回的知识片段与融合得分，验证检索质量。</p>
+  <div class="retrieve-box">
+    <input type="text" id="retrieveInput" placeholder="例如：BI-RADS 分级是什么意思？">
+    <button type="button" class="btn btn-primary" id="retrieveBtn">检索</button>
+  </div>
+  <div id="retrieveResult" class="retrieve-result"></div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/knowledge.js') }}"></script>
+{% endblock %}

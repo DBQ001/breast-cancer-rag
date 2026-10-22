@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}智能问答 · 乳愈智能{% endblock %}
+
+{% block content %}
+<section class="chat-layout">
+  <aside class="chat-side">
+    <h2>知识助手</h2>
+    <p class="muted">
+      基于 {{ rag.document_count }} 篇医学文档、{{ rag.chunk_count }} 个知识片段的 RAG 检索增强问答。
+      当前生成模式：<strong>{{ rag.llm_provider }}</strong>
+      {% if rag.llm_provider == 'local' %}（本地检索式，无需密钥）{% endif %}
+    </p>
+
+    <h3>试试这些问题</h3>
+    <div class="chips">
+      {% for q in samples %}
+      <button type="button" class="chip" data-question="{{ q }}">{{ q }}</button>
+      {% endfor %}
+    </div>
+
+    <div class="side-note">
+      <strong>实现说明</strong>
+      <ul>
+        <li>检索：字符级 TF-IDF 向量 + BM25 关键词双路召回</li>
+        <li>融合：0.6 × 向量分 + 0.4 × 关键词分</li>
+        <li>生成：大模型生成，失败自动降级为检索式答案</li>
+        <li>溯源：每条回答附知识片段引用编号</li>
+      </ul>
+      <p class="muted">
+        可在网页右下角「设置」中切换大模型后端（openai / dify / coze），
+        并填入接口地址与密钥，保存后立即生效。
+      </p>
+    </div>
+  </aside>
+
+  <section class="chat-main">
+    <div class="chat-log" id="chatLog">
+      <div class="msg msg-bot">
+        <div class="msg-avatar">医</div>
+        <div class="msg-body">
+          <p>你好，我是乳愈智能知识助手。我可以基于医学知识库回答乳腺癌相关问题，
+             也可以解释模型给出的预测结果。请问有什么想了解的？</p>
+        </div>
+      </div>
+    </div>
+
+    <form class="chat-input" id="chatForm">
+      <input type="text" id="chatQuestion" placeholder="请输入你的问题，例如：良性肿瘤和恶性肿瘤怎么区分？"
+             autocomplete="off" required>
+      <button type="submit" class="btn btn-primary">发送</button>
+    </form>
+  </section>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/assistant.js') }}"></script>
+{% endblock %}

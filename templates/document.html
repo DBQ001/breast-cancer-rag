@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}{{ document.title }} · 乳愈智能{% endblock %}
+
+{% block content %}
+<section class="page-head">
+  <div>
+    <p class="crumb"><a href="/knowledge">← 返回知识库</a></p>
+    <h1>{{ document.title }}</h1>
+    <p class="muted">{{ document.filename }}</p>
+  </div>
+</section>
+
+<article class="doc-body panel">
+  <div id="docSource" hidden>{{ document.content }}</div>
+  <div id="docRender" class="markdown-body"></div>
+</article>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/document.js') }}"></script>
+{% endblock %}

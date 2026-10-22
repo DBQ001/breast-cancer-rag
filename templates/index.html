@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}AI 预测 · 乳愈智能{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <div class="hero-copy">
+    <span class="pill">RAG 增强 · 可解释 AI</span>
+    <h1>输入 30 项细胞核形态学特征，<br>快速获得乳腺癌风险预测与智能解读</h1>
+    <p class="lead">
+      基于乳腺细针穿刺图像的量化特征，采用<strong>{{ model.algorithm_label }}</strong>模型判定良恶性，
+      并由医学知识库 RAG 生成可追溯的结果解读。
+    </p>
+    <div class="hero-actions">
+      <button type="button" class="btn btn-ghost" data-fill="benign">填充良性示例</button>
+      <button type="button" class="btn btn-ghost" data-fill="malignant">填充恶性示例</button>
+      <button type="button" class="btn btn-ghost" data-fill="random">随机示例</button>
+    </div>
+  </div>
+
+  <div class="hero-metrics">
+    <div class="metric-card">
+      <span class="metric-label">模型准确率</span>
+      <strong class="metric-value">{{ '%.2f'|format((model.metrics.accuracy or 0) * 100) }}%</strong>
+      <span class="metric-sub">测试集 {{ model.metrics.support }} 例</span>
+    </div>
+    <div class="metric-card">
+      <span class="metric-label">ROC-AUC</span>
+      <strong class="metric-value">{{ model.metrics.roc_auc }}</strong>
+      <span class="metric-sub">排序能力</span>
+    </div>
+    <div class="metric-card">
+      <span class="metric-label">召回率</span>
+      <strong class="metric-value">{{ '%.2f'|format((model.metrics.recall or 0) * 100) }}%</strong>
+      <span class="metric-sub">恶性样本识别率</span>
+    </div>
+    <div class="metric-card">
+      <span class="metric-label">知识库</span>
+      <strong class="metric-value">{{ rag.document_count }} 篇</strong>
+      <span class="metric-sub">{{ rag.chunk_count }} 个检索片段</span>
+    </div>
+  </div>
+</section>
+
+<form class="predict-form" action="/predict" method="post" id="predictForm">
+  <div class="form-head">
+    <div>
+      <h2>特征输入</h2>
+      <p class="muted">
+        数据集共 {{ stats.total }} 例样本（恶性 {{ stats.malignant }} / 良性 {{ stats.benign }}），
+        每行第 3 列起对应下方 30 个输入框。
+      </p>
+    </div>
+    <div class="form-head-actions">
+      <span class="hint" id="fillHint"></span>
+      <button type="submit" class="btn btn-primary btn-lg">开始预测</button>
+    </div>
+  </div>
+
+  <div class="feature-groups">
+    {% for group in feature_groups %}
+    <fieldset class="feature-group">
+      <legend>
+        <span class="legend-dot dot-{{ group.key }}"></span>{{ group.title }}
+        <span class="legend-note">{{ group.fields|length }} 项</span>
+      </legend>
+      <div class="feature-grid">
+        {% for item in group.fields %}
+        <label class="field" title="{{ item.hint }}">
+          <span class="field-label">{{ item.label }}</span>
+          <span class="field-en">{{ item.name }}</span>
+          <input type="number" step="any" name="value{{ item.index }}"
+                 id="field-{{ item.name }}" placeholder="0.0" required>
+        </label>
+        {% endfor %}
+      </div>
+    </fieldset>
+    {% endfor %}
+  </div>
+
+  <div class="form-foot">
+    <button type="button" class="btn btn-ghost" id="clearBtn">清空</button>
+    <button type="submit" class="btn btn-primary btn-lg">开始预测</button>
+  </div>
+</form>
+
+<section class="panel">
+  <h2>算法对照实验</h2>
+  <p class="muted">同一训练/测试集划分下，本系统主算法逻辑回归与开源工程原算法随机森林的对比。</p>
+  <div class="compare-table">
+    <table>
+      <thead>
+        <tr>
+          <th>算法</th><th>准确率</th><th>精确率</th><th>召回率</th>
+          <th>F1</th><th>AUC</th><th>单样本推理耗时</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for key, item in model.comparison.items() %}
+        <tr class="{{ 'row-highlight' if key == model.algorithm }}">
+          <td>
+            <strong>{{ item.algorithm_label }}</strong>
+            {% if key == model.algorithm %}<span class="tag">当前主算法</span>{% endif %}
+          </td>
+          <td>{{ '%.2f'|format(item.accuracy * 100) }}%</td>
+          <td>{{ '%.2f'|format(item.precision * 100) }}%</td>
+          <td>{{ '%.2f'|format(item.recall * 100) }}%</td>
+          <td>{{ item.f1 }}</td>
+          <td>{{ item.roc_auc }}</td>
+          <td>{{ item.predict_ms }} ms</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/predict.js') }}"></script>
+{% endblock %}
