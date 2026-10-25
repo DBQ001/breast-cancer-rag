@@ -40,6 +40,26 @@ def main() -> int:
     login = client.post('/login', data={'username': 'admin', 'password': 'admin123'})
     check('默认账号登录成功', login.status_code == 302)
 
+    # 0.1 普通用户角色：可访问业务页面，但看不到管理员设置
+    viewer = app_module.app.test_client()
+    viewer_login = viewer.post('/login', data={'username': 'user', 'password': '1234'})
+    check('普通用户登录成功', viewer_login.status_code == 302)
+    viewer_home = viewer.get('/')
+    home_html = viewer_home.get_data(as_text=True)
+    check('普通用户首页不显示设置入口', 'settings-fab' not in home_html)
+    settings_redirect = viewer.get('/settings')
+    check('普通用户访问设置页被重定向',
+          settings_redirect.status_code == 302
+          and '/settings' not in settings_redirect.headers.get('Location', ''))
+    check('普通用户读写设置接口返回 403',
+          viewer.get('/api/settings').status_code == 403
+          and viewer.post('/api/settings', json={'rag_top_k': 4}).status_code == 403)
+    check('普通用户仍可使用预测接口', viewer.post('/api/predict', json={
+        'features': [17.99, 10.38, 122.8, 1001.0, 0.1184, 0.2776, 0.3001, 0.1471,
+                     0.2419, 0.07871, 1.095, 0.9053, 8.589, 153.4, 0.006399, 0.04904,
+                     0.05373, 0.01587, 0.03003, 0.006193, 25.38, 17.33, 184.6, 2019.0,
+                     0.1622, 0.6656, 0.7119, 0.2654, 0.4601, 0.1189]}).status_code == 200)
+
     # 1. 健康检查
     health = client.get('/api/health').get_json()
     check('健康检查接口', health.get('status') == 'ok',

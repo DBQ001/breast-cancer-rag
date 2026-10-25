@@ -26,10 +26,12 @@
         <li>生成：大模型生成，失败自动降级为检索式答案</li>
         <li>溯源：每条回答附知识片段引用编号</li>
       </ul>
+      {% if is_admin %}
       <p class="muted">
         可在网页右下角「设置」中切换大模型后端（openai / dify / coze），
         并填入接口地址与密钥，保存后立即生效。
       </p>
+      {% endif %}
     </div>
   </aside>
 

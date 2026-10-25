@@ -20,8 +20,8 @@ import config
 from algorithm import dataset_statistics, get_model_service, sample_rows
 from algorithm.dataset import normalize_sample
 from algorithm.predictor import reset_model_service
-from auth import (current_username, hash_password, is_logged_in, PUBLIC_ENDPOINTS,
-                  verify_credentials)
+from auth import (authenticate, current_role, current_username, hash_password,
+                  is_admin, is_logged_in, PUBLIC_ENDPOINTS, VIEWER_USERNAME)
 from llm.client import LLMClient
 from rag.pipeline import get_rag_service, rebuild_index
 
@@ -34,21 +34,37 @@ MODEL_SERVICE = get_model_service()
 RAG_SERVICE = get_rag_service()
 
 
+# 仅管理员可访问的端点：系统设置页面与设置接口
+ADMIN_ENDPOINTS = {'settings_page', 'api_settings_get', 'api_settings_save',
+                   'api_settings_test'}
+
+
 # ------------------------------------------------------------------ 统一鉴权
 @app.before_request
 def _require_login():
-    """除登录页与静态资源外，所有页面与接口都必须先登录。"""
-    if (request.endpoint or '') in PUBLIC_ENDPOINTS or is_logged_in():
+    """除登录页与静态资源外都需登录；设置相关页面与接口仅管理员可用。"""
+    endpoint = request.endpoint or ''
+    if endpoint in PUBLIC_ENDPOINTS:
         return None
-    if request.path.startswith('/api/'):
-        return jsonify({'success': False, 'message': '登录状态已失效，请重新登录'}), 401
-    return redirect(url_for('login', next=request.path))
+    if not is_logged_in():
+        if request.path.startswith('/api/'):
+            return jsonify({'success': False, 'message': '登录状态已失效，请重新登录'}), 401
+        return redirect(url_for('login', next=request.path))
+    if endpoint in ADMIN_ENDPOINTS and not is_admin():
+        if request.path.startswith('/api/'):
+            return jsonify({'success': False, 'message': '该功能仅管理员可用'}), 403
+        return redirect(url_for('index'))
+    return None
 
 
 @app.context_processor
 def _inject_globals():
-    """模板全局变量：当前登录用户名（导航栏展示）。"""
-    return {'username': current_username()}
+    """模板全局变量：当前账号与角色，用于导航栏与管理员入口的差异化展示。"""
+    return {
+        'username': current_username(),
+        'role': current_role(),
+        'is_admin': is_admin(),
+    }
 
 
 # ------------------------------------------------------------------ 登录 / 登出
@@ -63,8 +79,10 @@ def login():
     if request.method == 'POST':
         username = (request.form.get('username') or '').strip()
         password = request.form.get('password') or ''
-        if verify_credentials(username, password):
-            session['username'] = username
+        account = authenticate(username, password)
+        if account:
+            session['username'] = account['username']
+            session['role'] = account['role']
             target = request.form.get('next') or request.args.get('next') or url_for('index')
             if not target.startswith('/'):
                 target = url_for('index')
@@ -159,6 +177,9 @@ def api_settings_save():
 
     username = str(payload.get('auth_username') or '').strip()
     if username:
+        if username == VIEWER_USERNAME:
+            return jsonify({'success': False,
+                            'message': f'账号名 {VIEWER_USERNAME} 为普通用户保留，请换一个'}), 400
         values['AUTH_USERNAME'] = username
 
     new_password = str(payload.get('new_password') or '')
